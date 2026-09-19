@@ -7,8 +7,13 @@
 
 import { apiFetch } from './api'
 
-// 백엔드 MapBounds.MAX_SPAN_DEGREE 와 같은 값. 이보다 넓게 요청하면 400 이다.
-export const MAX_SPAN_DEGREE = 0.5
+// 백엔드 CctvService·SecurityLightService 의 MAX_BBOX_RANGE 와 같은 값. 이보다 넓게 요청하면 400 이다.
+// (CCTV·가로등을 그리는 레벨 4 이하에서는 2560px 화면도 경도 0.06° 정도라 걸릴 일이 없다.)
+export const MAX_SPAN_DEGREE = 0.1
+
+// 여유분을 붙여 상한에 딱 맞춘 범위는 부동소수점 오차로 0.1 을 살짝 넘을 수 있다.
+// 그러면 백엔드가 400 을 돌려주므로 여유분 계산에서만 조금 덜 채운다.
+const PAD_LIMIT = MAX_SPAN_DEGREE * 0.99
 
 // 받아 둘 범위를 화면보다 이만큼 넓게 잡는다. 조금 끌 때마다 다시 받지 않기 위한 여유분.
 const PAD_RATIO = 0.5
@@ -31,11 +36,11 @@ function padBox(box) {
 
   const latPad = Math.min(
     (latSpan * PAD_RATIO) / 2,
-    Math.max(0, (MAX_SPAN_DEGREE - latSpan) / 2),
+    Math.max(0, (PAD_LIMIT - latSpan) / 2),
   )
   const lngPad = Math.min(
     (lngSpan * PAD_RATIO) / 2,
-    Math.max(0, (MAX_SPAN_DEGREE - lngSpan) / 2),
+    Math.max(0, (PAD_LIMIT - lngSpan) / 2),
   )
 
   return {
@@ -64,12 +69,14 @@ export function isTooWide(box) {
   )
 }
 
+// 백엔드 파라미터 이름은 minLat/maxLat/minLng/maxLng 다. 예전 이름(minLatitude…)으로 보내면
+// 백엔드가 범위 없음으로 보고 400 을 돌려준다.
 function toQuery(box) {
   return new URLSearchParams({
-    minLatitude: box.minLatitude,
-    maxLatitude: box.maxLatitude,
-    minLongitude: box.minLongitude,
-    maxLongitude: box.maxLongitude,
+    minLat: box.minLatitude,
+    maxLat: box.maxLatitude,
+    minLng: box.minLongitude,
+    maxLng: box.maxLongitude,
   }).toString()
 }
 

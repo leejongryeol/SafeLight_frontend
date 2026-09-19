@@ -11,10 +11,9 @@ import { loadActiveRoute, clearActiveRoute } from '../utils/activeRoute'
 export default function MainPage({ user, onLogout }) {
   const location = useLocation()
   const { dangerZones, isLoading, refresh } = useSafetyData()
-  // 셋 다 켜둔다 — 칩이 켜져 있어야 무엇을 보고 있는지 읽힌다.
-  // 가로등은 목록을 못 받아오면 MapView 가 칩을 잠그므로 여기서 켜 둬도 그려지지 않는다.
+  // 넷 다 켜둔다 — 칩이 켜져 있어야 무엇을 보고 있는지 읽힌다.
   // (기본 레벨 4에서는 가로등이 LAMP_MAX_LEVEL 밖이라 '확대하면 표시됩니다' 안내만 뜬다.)
-  const [filters, setFilters] = useState({ cctv: true, streetLamp: true, store: true })
+  const [filters, setFilters] = useState({ cctv: true, streetLamp: true, store: true, police: true })
 
   // 상단 검색(모든 페이지 공용) 또는 다른 페이지에서 넘어온 장소로 지도 이동
   const [mapTarget, setMapTarget] = useState(null)

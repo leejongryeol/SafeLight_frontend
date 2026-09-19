@@ -2,8 +2,11 @@
 // 두 화면이 같은 데이터를 다른 색·다른 규칙으로 그리면 사용자가 매번 다시 배워야 한다.
 
 // 레이어별 점 색. 내 위치가 파란 원이라 CCTV 도 파랑이면 둘을 구분할 수 없었다 —
-// CCTV 빨강 / 가로등 노랑 / 편의점 초록으로 나눠 파랑은 '내 위치' 전용으로 남긴다.
-export const LAYER_COLOR = { cctv: '#E11D48', streetLamp: '#F59E0B', store: '#10B981' }
+// CCTV 빨강 / 가로등 노랑 / 편의점 초록으로 나눠 파랑은 '내 위치' 전용으로 남겼었다.
+//
+// 치안시설(지구대·파출소 등)은 경찰을 떠올리게 파랑으로 한다. 대신 내 위치(#4285F4, 밝은 하늘색
+// + 퍼지는 파동)와 헷갈리지 않게 **짙은 남색**으로 두고, 파동 없이 다른 시설과 같은 점으로 그린다.
+export const LAYER_COLOR = { cctv: '#E11D48', streetLamp: '#F59E0B', store: '#10B981', police: '#1E40AF' }
 
 // 지도 화면의 시설 점(CCTV·편의점)을 그리는 최대 지도 레벨. 이 레벨을 넘어서면
 // 예전에는 마커 클러스터러가 마커를 묶었는데, 묶어도 수천 개를 만들어 붙이는 건 마찬가지라
@@ -49,7 +52,7 @@ export const lampMaxLevel = (isMobile) => (isMobile ? LAMP_MAX_LEVEL : LAMP_MAX_
 
 // 지도 오버레이 쌓임 순서. 숫자가 클수록 위에 온다.
 //
-//   가로등 1 · CCTV 2 · 편의점 3   — 배경. 개수가 많은 것부터 아래에 깐다.
+//   가로등 1 · CCTV 2 · 편의점 3 · 치안시설 4   — 배경. 개수가 많은 것부터 아래에 깐다.
 //   경로 위 안전시설 5              — 그 경로에 붙은 시설이라 배경보다 위여야 한다.
 //   출발·도착 6                     — 사용자가 직접 고른 지점.
 //   내 위치 9
@@ -59,6 +62,7 @@ export const lampMaxLevel = (isMobile) => (isMobile ? LAMP_MAX_LEVEL : LAMP_MAX_
 // 묻혀 있었다. 지도에서 '내가 어디인지'와 '방금 찾은 곳'을 잃으면 나머지 정보가 다 무의미하다.
 // 새 오버레이를 만들 때는 여기서 값을 가져다 쓸 것 — 숫자를 직접 적으면 또 어긋난다.
 // (안드로이드는 MapLayers 의 레이어 zOrder 가 같은 역할을 한다.)
+export const POLICE_Z = 4
 export const MY_LOCATION_Z = 9
 export const ROUTE_ENDPOINT_Z = 6
 export const SEARCH_PIN_Z = 10

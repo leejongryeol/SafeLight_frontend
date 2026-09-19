@@ -1,8 +1,12 @@
-// 바텀시트 드래그 — 핸들을 잡고 위아래로 끌면 그만큼 시트 높이가 따라오고, 놓으면 가장 가까운
-// 스냅 지점으로 붙는다. 스냅은 3단계:
+// 바텀시트 드래그 — 핸들을 잡고 위아래로 끌면 그만큼 시트 높이가 따라오고, 놓으면 끈 **방향**의
+// 끝까지 간다. 위로 조금만 끌어도 full, 아래로 조금만 끌어도 collapsed 다.
 //   collapsed : 핸들 바만 남고 지도만 보이는 상태
-//   mid       : 기본값. 시트 머리말 정도가 보인다
+//   mid       : 처음 열었을 때의 상태. 시트 머리말 정도가 보인다(드래그로는 다시 오지 않는다)
 //   full      : 시트가 화면을 거의 다 덮는다
+//
+// 예전에는 놓은 자리에서 '가장 가까운' 스냅으로 붙였다. 그러면 끝까지 올리려면 화면 절반 넘게
+// 끌어야 했고, 조금 끌다 놓으면 제자리로 튕겨 돌아와 사용자가 두세 번씩 다시 끌었다.
+// 안드로이드 앱(DragSheet.kt)도 같은 규칙이다 — 한쪽만 바꾸지 말 것.
 //
 // 핸들 바는 포인터 이벤트로 끈다(터치·마우스 공용).
 // 본문(스크롤 영역)은 네이티브 스크롤과 공존해야 해서 터치 이벤트로 직접 중재한다:
@@ -12,7 +16,8 @@
 //                                    본문은 정상 스크롤하되 맨 위에서 더 당기면 그때 시트가 내려간다.
 import { useState, useRef, useEffect, useCallback } from 'react'
 
-const SNAP_ORDER = ['collapsed', 'mid', 'full']
+// 이만큼(px) 이상 끌어야 '방향이 있는 드래그'로 본다. 이보다 짧으면 손떨림으로 보고 제자리로 돌린다.
+const FLICK_PX = 12
 
 export default function useDragSheet(containerRef, {
   collapsed = 26,
@@ -51,18 +56,14 @@ export default function useDragSheet(containerRef, {
   const current = height ?? pointFor(initial)
   const isFull = containerH > 0 && current >= pointFor('full') - 2
 
-  // 놓았을 때 가장 가까운 스냅 지점으로 붙인다.
-  const settle = useCallback(() => {
+  // 놓았을 때 끈 방향의 끝으로 보낸다. startH 는 끌기 시작할 때의 높이다.
+  const settle = useCallback((startH) => {
     setHeight((h) => {
       const cur = h ?? pointFor(initial)
-      let best = pointFor('mid')
-      let bestGap = Infinity
-      for (const name of SNAP_ORDER) {
-        const p = pointFor(name)
-        const gap = Math.abs(p - cur)
-        if (gap < bestGap) { bestGap = gap; best = p }
-      }
-      return best
+      const dy = cur - startH
+      if (dy >= FLICK_PX) return pointFor('full')
+      if (dy <= -FLICK_PX) return pointFor('collapsed')
+      return startH // 거의 안 움직였으면 원래 자리로
     })
   }, [pointFor, initial])
 
@@ -87,12 +88,12 @@ export default function useDragSheet(containerRef, {
     drag.current = null
     setDragging(false)
     if (!d) return
-    // 거의 안 움직였으면 탭으로 보고 mid ↔ full 토글
+    // 거의 안 움직였으면 탭으로 보고 끝과 끝을 오간다(다 올라가 있으면 내리고, 아니면 올린다).
     if (d.moved < 5) {
-      setHeight(h => ((h ?? pointFor(initial)) >= pointFor('full') - 2 ? pointFor('mid') : pointFor('full')))
+      setHeight(h => ((h ?? pointFor(initial)) >= pointFor('full') - 2 ? pointFor('collapsed') : pointFor('full')))
       return
     }
-    settle()
+    settle(d.startH)
   }, [pointFor, initial, settle])
 
   // ── 본문(터치) : 스크롤과 시트 드래그를 상황에 맞게 중재 ────────────
@@ -151,8 +152,9 @@ export default function useDragSheet(containerRef, {
     const onEnd = () => {
       if (!g) return
       const wasSheet = g.mode === 'sheet'
+      const startH = g.startH
       g = null
-      if (wasSheet) { setDragging(false); settle() }
+      if (wasSheet) { setDragging(false); settle(startH) }
     }
 
     bodyEl.addEventListener('touchstart', onStart, { passive: true })

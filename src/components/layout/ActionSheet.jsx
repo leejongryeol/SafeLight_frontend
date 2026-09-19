@@ -9,7 +9,7 @@
 // 핸들 바 4px 만 판정하면 겨냥이 필요해서 '부드럽다'는 느낌이 나오지 않는다.
 //
 // 목록이 스크롤 중이면 그 스크롤이 우선이다(맨 위에서 더 내릴 때만 시트가 따라온다).
-// 지도·경로의 상주 시트(useDragSheet)와는 다른 물건이다 — 저쪽은 3단 스냅이고 닫히지 않는다.
+// 지도·경로의 상주 시트(useDragSheet)와는 다른 물건이다 — 저쪽은 끈 방향 끝까지 붙고 닫히지 않는다.
 import { useState, useRef, useEffect, useCallback } from 'react'
 
 const TONE_COLOR = {

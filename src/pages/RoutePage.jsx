@@ -8,7 +8,7 @@ import useSheetHeadHeight from '../hooks/useSheetHeadHeight'
 import { SHEET_COLLAPSED } from '../components/layout/BottomSheet'
 import { apiFetch } from '../utils/api'
 import { saveActiveRoute } from '../utils/activeRoute'
-import { LAYER_COLOR, FACILITY_MAX_LEVEL, lampMaxLevel, dotContent } from '../components/Map/layerStyle'
+import { LAYER_COLOR, FACILITY_MAX_LEVEL, lampMaxLevel, POLICE_Z, dotContent } from '../components/Map/layerStyle'
 import { createFacilityLoader } from '../utils/facilityApi'
 import { renderFacilityDots } from '../components/Map/facilityLayer'
 import { collectStores } from '../components/Map/storeSearch'
@@ -25,6 +25,12 @@ const loadLamps = createFacilityLoader('/security-lights', item => ({
   lng: item.longitude,
 }))
 
+// 치안시설(지구대·파출소 등). 범위 규칙은 CCTV·가로등과 같다.
+const loadPolice = createFacilityLoader('/police-facilities', item => ({
+  lat: item.latitude,
+  lng: item.longitude,
+}))
+
 const START_COLOR = '#2563EB'
 const DEST_COLOR = '#E11D48'
 
@@ -35,6 +41,7 @@ const segmentKey = (start, dest) => `${coordKey(start)}|${coordKey(dest)}`
 const cctvDot = dotContent(LAYER_COLOR.cctv, 9)
 const lampDot = dotContent(LAYER_COLOR.streetLamp, 9)
 const storeDot = dotContent(LAYER_COLOR.store, 9)
+const policeDot = dotContent(LAYER_COLOR.police, 9)
 
 // '2026-08-06T08:35:12' → '08-06 08:35'
 const fmtSearchedAt = (iso) => (iso ? String(iso).slice(5, 16).replace('T', ' ') : '')
@@ -64,6 +71,8 @@ export default function RoutePage({ user, onLogout }) {
   const lampOverlaysRef = useRef([])
   const storeReqRef = useRef(0)
   const storeOverlaysRef = useRef([])
+  const policeReqRef = useRef(0)
+  const policeOverlaysRef = useRef([])
   const resultSegmentRef = useRef('') // 지금 띄워둔 검색 결과가 어느 구간의 것인지
 
   // 모바일에서는 바텀시트가 지도 아래쪽을 덮는다. 그냥 setCenter 하면 출발/도착 마커가 시트 뒤로 숨으므로,
@@ -140,6 +149,14 @@ export default function RoutePage({ user, onLogout }) {
     dot: lampDot, zIndex: 1, label: '가로등',
   }), [isMobile])
 
+  // 치안시설은 몇 곳 안 되니 배경 시설 중 맨 위(zIndex 4)에 얹는다.
+  const renderPoliceInBounds = useCallback(() => renderFacilityDots({
+    map: mapInstance.current,
+    overlaysRef: policeOverlaysRef, seqRef: policeReqRef,
+    load: loadPolice, maxLevel: FACILITY_MAX_LEVEL,
+    dot: policeDot, zIndex: POLICE_Z, label: '치안시설',
+  }), [])
+
   // 편의점만 출처가 다르다. 백엔드에 영역 조회가 없어 카카오 로컬을 직접 부른다(storeSearch.js).
   const renderStoresInBounds = useCallback(() => {
     const map = mapInstance.current
@@ -170,7 +187,8 @@ export default function RoutePage({ user, onLogout }) {
     renderCctvInBounds()
     renderLampsInBounds()
     renderStoresInBounds()
-  }, [renderCctvInBounds, renderLampsInBounds, renderStoresInBounds])
+    renderPoliceInBounds()
+  }, [renderCctvInBounds, renderLampsInBounds, renderStoresInBounds, renderPoliceInBounds])
 
   useEffect(() => {
     const initMap = () => {
@@ -294,7 +312,7 @@ export default function RoutePage({ user, onLogout }) {
   const clearMarkers = useCallback(() => { markersRef.current.forEach(m => m.setMap(null)); markersRef.current = [] }, [])
 
   // 경로 주변 안전시설 점 — 백엔드가 경로마다 cctvLocations / storeLocations /
-  // securityLightLocations 를 같이 내려준다(RouteDto).
+  // securityLightLocations / policeFacilityLocations 를 같이 내려준다(RouteDto).
   const clearFacilities = useCallback(() => { facilityOverlaysRef.current.forEach(o => o.setMap(null)); facilityOverlaysRef.current = [] }, [])
 
   const clearPolylines = useCallback(() => {
@@ -325,6 +343,7 @@ export default function RoutePage({ user, onLogout }) {
     add(route?.securityLightLocations, LAYER_COLOR.streetLamp)
     add(route?.cctvLocations, LAYER_COLOR.cctv)
     add(route?.storeLocations, LAYER_COLOR.store)
+    add(route?.policeFacilityLocations, LAYER_COLOR.police)
   }
 
   const addMarker = useCallback((latlng, label, color) => {
@@ -589,11 +608,12 @@ export default function RoutePage({ user, onLogout }) {
     cctv: route?.cctvLocations?.length ?? null,
     store: route?.storeLocations?.length ?? null,
     streetLamp: route?.securityLightLocations?.length ?? null,
+    police: route?.policeFacilityLocations?.length ?? null,
   })
   const facilityDetail = (route) => {
-    const { cctv, store, streetLamp } = facilityCounts(route)
-    if (cctv == null && store == null && streetLamp == null) return null
-    return `CCTV ${cctv ?? 0} · 가로등 ${streetLamp ?? 0} · 편의점 ${store ?? 0}`
+    const { cctv, store, streetLamp, police } = facilityCounts(route)
+    if (cctv == null && store == null && streetLamp == null && police == null) return null
+    return `CCTV ${cctv ?? 0} · 가로등 ${streetLamp ?? 0} · 편의점 ${store ?? 0} · 치안시설 ${police ?? 0}`
   }
 
   return (
@@ -646,7 +666,7 @@ export default function RoutePage({ user, onLogout }) {
               ...(isMobile ? { position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 2 } : {}),
             }}>
               <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-.3px' }}>안전 경로 안내</div>
-              <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 2 }}>CCTV·가로등·편의점 밀집도로 안전한 길을 찾습니다</div>
+              <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 2 }}>CCTV·가로등·편의점·치안시설 밀집도로 안전한 길을 찾습니다</div>
             </div>
 
             {/* 출발지 */}
@@ -822,7 +842,7 @@ export default function RoutePage({ user, onLogout }) {
                         <div style={{ height: 5, borderRadius: 3, background: scoreColor(route.safetyScore), width: `${barRatio(route.safetyScore)}%`, transition: 'width .4s' }} />
                       </div>
                       {/* 점수의 내역을 같이 보여준다 — 합계만 보면 무엇이 많아서 높은지 알 수 없다.
-                          셋이 한 줄에 안 들어가면 접는다(flexWrap) — 보안등 수는 네 자리까지 가고
+                          넷이 한 줄에 안 들어가면 접는다(flexWrap) — 보안등 수는 네 자리까지 가고
                           모바일 시트는 데스크탑 패널(360)보다 좁아질 수 있다. */}
                       {facilityDetail(route) && (
                         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', columnGap: 10, rowGap: 3, fontSize: 11.5, color: 'var(--text-muted)', marginBottom: 6 }}>
@@ -834,6 +854,9 @@ export default function RoutePage({ user, onLogout }) {
                           </span>
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                             <span style={{ width: 8, height: 8, borderRadius: '50%', background: LAYER_COLOR.store }} />편의점 {facilityCounts(route).store ?? 0}
+                          </span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: LAYER_COLOR.police }} />치안시설 {facilityCounts(route).police ?? 0}
                           </span>
                         </div>
                       )}

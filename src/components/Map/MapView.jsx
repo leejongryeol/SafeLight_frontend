@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback, useState } from 'react'
 import useIsMobile from '../../hooks/useIsMobile'
 import Icon from '../Icon'
 import { iconSvg } from '../iconSvg'
-import { LAYER_COLOR, FACILITY_MAX_LEVEL, lampMaxLevel, MY_LOCATION_Z, ROUTE_ENDPOINT_Z, SEARCH_PIN_Z, dotContent } from './layerStyle'
+import { LAYER_COLOR, FACILITY_MAX_LEVEL, lampMaxLevel, POLICE_Z, MY_LOCATION_Z, ROUTE_ENDPOINT_Z, SEARCH_PIN_Z, dotContent } from './layerStyle'
 import { createFacilityLoader } from '../../utils/facilityApi'
 import { renderFacilityDots } from './facilityLayer'
 import { collectStores } from './storeSearch'
@@ -22,6 +22,13 @@ const loadLamps = createFacilityLoader('/security-lights', item => ({
   lng: item.longitude,
 }))
 
+// 치안시설(지구대·파출소 등). CCTV·가로등과 같은 범위 규칙(minLat… 필수, 0.1도 상한)이다.
+const loadPolice = createFacilityLoader('/police-facilities', item => ({
+  lat: item.latitude,
+  lng: item.longitude,
+  name: item.name,
+}))
+
 export default function MapView({ filters, onToggleFilter, dangerZones = [], routeState = null, onCancelRoute, searchTarget = null }) {
   // 모바일에서는 레이어 칩을 데스크탑의 3/4 크기로 줄인다(34 → 26px).
   const isMobile = useIsMobile()
@@ -34,9 +41,12 @@ export default function MapView({ filters, onToggleFilter, dangerZones = [], rou
   const lampReqRef = useRef(0)
   const storeOverlaysRef = useRef([])
   const storeReqRef = useRef(0)
+  const policeOverlaysRef = useRef([])
+  const policeReqRef = useRef(0)
   const [cctvNotice, setCctvNotice] = useState('')
   const [lampNotice, setLampNotice] = useState('')
   const [storeNotice, setStoreNotice] = useState('')
+  const [policeNotice, setPoliceNotice] = useState('')
   // 예전에는 '가로등 목록을 받아왔는지'(lampReady)로 칩을 잠갔다. 전용 엔드포인트가
   // 아직 없던 시절, 눌러도 아무 일이 없는 칩을 감추기 위한 장치였다.
   // 지금은 엔드포인트가 있고 화면을 옮길 때마다 조회하므로, 한 번 실패했다고 칩을 잠그면
@@ -98,6 +108,23 @@ export default function MapView({ filters, onToggleFilter, dangerZones = [], rou
       count: n => `가로등 ${n}개`,
     },
   }), [isMobile])
+
+  // 치안시설은 동네에 몇 곳뿐이라 개수 부담이 없다. 그래서 제일 위(zIndex 4)에 얹는다 —
+  // 수백 개의 가로등·CCTV 점 밑에 묻히면 정작 찾아가야 할 곳이 안 보인다.
+  const renderPoliceInBounds = useCallback(() => renderFacilityDots({
+    map: mapInstance.current,
+    overlaysRef: policeOverlaysRef, seqRef: policeReqRef,
+    load: loadPolice, maxLevel: FACILITY_MAX_LEVEL,
+    dot: dotContent(LAYER_COLOR.police), zIndex: POLICE_Z,
+    enabled: filtersRef.current?.police,
+    setNotice: setPoliceNotice, label: '치안시설',
+    notice: {
+      zoomOut: '지도를 확대하면 주변 치안시설이 표시됩니다',
+      fail: '치안시설 정보를 불러오지 못했습니다',
+      empty: '이 지역에는 치안시설이 없습니다',
+      count: n => `치안시설 ${n}곳`,
+    },
+  }), [])
 
   const clearStores = useCallback(() => {
     storeOverlaysRef.current.forEach(o => o.setMap(null))
@@ -281,12 +308,13 @@ export default function MapView({ filters, onToggleFilter, dangerZones = [], rou
       }
       mapInstance.current = new window.kakao.maps.Map(container, options)
 
-      // CCTV·가로등·편의점 모두 아래 mapReady effect 가 곧바로 한 번 그린다.
+      // CCTV·가로등·편의점·치안시설 모두 아래 mapReady effect 가 곧바로 한 번 그린다.
       // 여기서 또 부르면 같은 범위를 두 번 조회한다.
       window.kakao.maps.event.addListener(mapInstance.current, 'idle', () => {
         renderCctvInBounds()
         renderLampsInBounds()
         renderStoresInBounds()
+        renderPoliceInBounds()
       })
 
       setMapReady(true)
@@ -352,14 +380,15 @@ export default function MapView({ filters, onToggleFilter, dangerZones = [], rou
       }, 300)
       return () => clearInterval(check)
     }
-  }, [renderCctvInBounds, renderLampsInBounds, renderStoresInBounds])
+  }, [renderCctvInBounds, renderLampsInBounds, renderStoresInBounds, renderPoliceInBounds])
 
   // 필터 변경 시 (각 render 함수가 켬/끔을 알아서 처리한다)
   useEffect(() => {
     renderCctvInBounds()
     renderLampsInBounds()
     renderStoresInBounds()
-  }, [mapReady, filters, renderCctvInBounds, renderLampsInBounds, renderStoresInBounds])
+    renderPoliceInBounds()
+  }, [mapReady, filters, renderCctvInBounds, renderLampsInBounds, renderStoresInBounds, renderPoliceInBounds])
 
   // 위험구역 변경 시
   useEffect(() => {
@@ -390,11 +419,12 @@ export default function MapView({ filters, onToggleFilter, dangerZones = [], rou
         mapInstance.current.relayout()
         renderCctvInBounds()
         renderLampsInBounds()
+        renderPoliceInBounds()
       })
     })
     ro.observe(mapRef.current)
     return () => ro.disconnect()
-  }, [renderCctvInBounds, renderLampsInBounds])
+  }, [renderCctvInBounds, renderLampsInBounds, renderPoliceInBounds])
 
   // 상단 장소 검색에서 선택한 위치로 이동 + 핀 표시
   useEffect(() => {
@@ -458,6 +488,7 @@ export default function MapView({ filters, onToggleFilter, dangerZones = [], rou
           { key: 'cctv', icon: 'cctv', label: 'CCTV' },
           { key: 'streetLamp', icon: 'street-lamp', label: '가로등' },
           { key: 'store', icon: 'store', label: '편의점' },
+          { key: 'police', icon: 'shield', label: '치안시설' },
         ].map(ly => {
           const on = !!filters?.[ly.key]
           return (
@@ -484,14 +515,14 @@ export default function MapView({ filters, onToggleFilter, dangerZones = [], rou
       {/* 레이어 안내 — 몇 곳을 찾았는지, 왜 안 보이는지(너무 넓게 봄), 결과가 잘렸는지 알린다.
           앞의 색 점이 지도 위 점 색과 같아서 어느 레이어 얘기인지 바로 읽힌다.
           모바일에서 경로 배너가 떠 있으면 그 아래로 내린다. */}
-      {(cctvNotice || lampNotice || storeNotice) && (
+      {(cctvNotice || lampNotice || storeNotice || policeNotice) && (
         <div style={{
           position: 'absolute', zIndex: 10, left: isMobile ? 12 : 16,
           top: 16 + CHIP_H + (isMobile && routeState?.routeActive ? 46 : 8),
           display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
           gap: 5, pointerEvents: 'none',
         }}>
-          {[[cctvNotice, LAYER_COLOR.cctv], [lampNotice, LAYER_COLOR.streetLamp], [storeNotice, LAYER_COLOR.store]]
+          {[[cctvNotice, LAYER_COLOR.cctv], [lampNotice, LAYER_COLOR.streetLamp], [storeNotice, LAYER_COLOR.store], [policeNotice, LAYER_COLOR.police]]
             .filter(([text]) => text)
             .map(([text, color]) => (
               <div key={color} style={{
