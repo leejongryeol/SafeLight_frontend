@@ -1,0 +1,24 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    { "source": "/users/:path*", "destination": "http://13.125.163.45/users/:path*" },
+    { "source": "/friends/:path*", "destination": "http://13.125.163.45/friends/:path*" },
+    { "source": "/messages/:path*", "destination": "http://13.125.163.45/messages/:path*" },
+    { "source": "/posts/:path*", "destination": "http://13.125.163.45/posts/:path*" },
+    { "source": "/cctvs/:path*", "destination": "http://13.125.163.45/cctvs/:path*" },
+    { "source": "/security-lights/:path*", "destination": "http://13.125.163.45/security-lights/:path*" },
+    { "source": "/police-facilities/:path*", "destination": "http://13.125.163.45/police-facilities/:path*" },
+    { "source": "/danger-zones/:path*", "destination": "http://13.125.163.45/danger-zones/:path*" },
+    { "source": "/emergency-reports/:path*", "destination": "http://13.125.163.45/emergency-reports/:path*" },
+    { "source": "/routes/:path*", "destination": "http://13.125.163.45/routes/:path*" },
+    { "source": "/bookmarks/:path*", "destination": "http://13.125.163.45/bookmarks/:path*" },
+    { "source": "/notifications/:path*", "destination": "http://13.125.163.45/notifications/:path*" },
+    { "source": "/recent-routes/:path*", "destination": "http://13.125.163.45/recent-routes/:path*" },
+
+    { "source": "/admin/dashboard/:path*", "destination": "http://13.125.163.45/admin/dashboard/:path*" },
+    { "source": "/admin/emergency-reports/:path*", "destination": "http://13.125.163.45/admin/emergency-reports/:path*" },
+    { "source": "/admin/users/:id(\\d+)/status", "destination": "http://13.125.163.45/admin/users/:id/status" },
+
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
