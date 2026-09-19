@@ -14,6 +14,7 @@
     { "source": "/recent-routes/:path*", "destination": "http://13.125.163.45/recent-routes/:path*" },
     { "source": "/admin/dashboard/:path*", "destination": "http://13.125.163.45/admin/dashboard/:path*" },
     { "source": "/admin/emergency-reports/:path*", "destination": "http://13.125.163.45/admin/emergency-reports/:path*" },
-    { "source": "/admin/users/:id/status", "destination": "http://13.125.163.45/admin/users/:id/status" }
+    { "source": "/admin/users/:id/status", "destination": "http://13.125.163.45/admin/users/:id/status" },
+    { "source": "/((?!assets/|favicon|.*\\.(?:js|css|svg|png|jpg|jpeg|ico|json|map)$).*)", "destination": "/index.html" }
   ]
 }
