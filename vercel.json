@@ -5,10 +5,19 @@
     { "source": "/friends/:path*", "destination": "http://13.125.163.45/friends/:path*" },
     { "source": "/messages/:path*", "destination": "http://13.125.163.45/messages/:path*" },
     { "source": "/posts/:path*", "destination": "http://13.125.163.45/posts/:path*" },
+
+    { "source": "/cctvs", "destination": "http://13.125.163.45/cctvs" },
     { "source": "/cctvs/:path*", "destination": "http://13.125.163.45/cctvs/:path*" },
+
+    { "source": "/security-lights", "destination": "http://13.125.163.45/security-lights" },
     { "source": "/security-lights/:path*", "destination": "http://13.125.163.45/security-lights/:path*" },
+
+    { "source": "/police-facilities", "destination": "http://13.125.163.45/police-facilities" },
     { "source": "/police-facilities/:path*", "destination": "http://13.125.163.45/police-facilities/:path*" },
+
+    { "source": "/danger-zones", "destination": "http://13.125.163.45/danger-zones" },
     { "source": "/danger-zones/:path*", "destination": "http://13.125.163.45/danger-zones/:path*" },
+
     { "source": "/emergency-reports/:path*", "destination": "http://13.125.163.45/emergency-reports/:path*" },
     { "source": "/routes/:path*", "destination": "http://13.125.163.45/routes/:path*" },
     { "source": "/bookmarks/:path*", "destination": "http://13.125.163.45/bookmarks/:path*" },
