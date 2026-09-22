@@ -24,8 +24,12 @@
     { "source": "/notifications/:path*", "destination": "http://13.125.163.45/notifications/:path*" },
     { "source": "/recent-routes/:path*", "destination": "http://13.125.163.45/recent-routes/:path*" },
 
+    { "source": "/admin/dashboard", "destination": "http://13.125.163.45/admin/dashboard" },
     { "source": "/admin/dashboard/:path*", "destination": "http://13.125.163.45/admin/dashboard/:path*" },
+
+    { "source": "/admin/emergency-reports", "destination": "http://13.125.163.45/admin/emergency-reports" },
     { "source": "/admin/emergency-reports/:path*", "destination": "http://13.125.163.45/admin/emergency-reports/:path*" },
+
     { "source": "/admin/users/:id(\\d+)/status", "destination": "http://13.125.163.45/admin/users/:id/status" },
 
     { "source": "/(.*)", "destination": "/index.html" }
